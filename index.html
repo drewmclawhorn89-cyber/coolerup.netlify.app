@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoolerUp</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>CoolerUp</h1>
+  <nav id="tabs">
+    <button data-tab="top" class="active">Top</button>
+    <button data-tab="mine">Mine</button>
+  </nav>
+</header>
+<main>
+  <form id="post-form">
+    <input id="title" placeholder="Title" required maxlength="80">
+    <input id="url" type="url" placeholder="Video URL (https://...mp4)" required>
+    <button type="submit">Post</button>
+  </form>
+  <div id="feed"></div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
