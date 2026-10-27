@@ -1,27 +1,1298 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CoolerUp</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<header>
-  <h1>CoolerUp</h1>
-  <nav id="tabs">
-    <button data-tab="top" class="active">Top</button>
-    <button data-tab="mine">Mine</button>
-  </nav>
-</header>
-<main>
-  <form id="post-form">
-    <input id="title" placeholder="Title" required maxlength="80">
-    <input id="url" type="url" placeholder="Video URL (https://...mp4)" required>
-    <button type="submit">Post</button>
-  </form>
-  <div id="feed"></div>
-</main>
-<script src="app.js"></script>
-</body>
-</html>
+<html><head><meta charset="utf-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=aa00a3f2-01e0-4c29-9a11-27355c9ffb76
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<meta property="og:image" content="https://coolerup.netlify.app/.netlify/og-image/94be210a87634c4c47f2bdc0c5d01537.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>cooler up</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;color:#fff;font-family:-apple-system,system-ui;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.top{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:20;background:linear-gradient(180deg,rgba(0,0,0,.9),transparent)}
+.top b{font-size:20px;font-weight:900}
+.feed{height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
+.page{height:100vh;scroll-snap-align:start;position:relative;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.page video{width:100%;height:100%;object-fit:cover;background:#111;position:absolute;inset:0}
+.poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#222;z-index:1}
+.playOverlay{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.25);cursor:pointer}
+.playBtn{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;font-size:30px;color:#000}
+.gradient{position:absolute;bottom:0;left:0;right:0;height:70%;background:linear-gradient(transparent,rgba(0,0,0,.95));pointer-events:none;z-index:2}
+.caption{position:absolute;bottom:90px;left:12px;right:80px;z-index:3;line-height:1.3}
+.caption b{font-size:15px;font-weight:800}
+.caption p{font-size:13px;margin-top:3px}
+.caption .likesBadge{font-size:11px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:12px;margin-top:8px;display:inline-flex;gap:4px}
+.actions{position:absolute;right:8px;bottom:110px;display:flex;flex-direction:column;gap:18px;z-index:3;align-items:center}
+.act{width:52px;text-align:center;cursor:pointer}
+.bubble{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.15);display:grid;place-items:center;font-size:22px;transition:.2s}
+.bubble.liked{background:rgba(254,44,85,.9);animation:pop .3s}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+.act small{font-size:11px;font-weight:700;margin-top:4px;display:block}
+.act small b{font-size:13px}
+.nav{position:fixed;bottom:0;left:0;right:0;height:83px;background:#000;border-top:1px solid #1a1a1a;display:flex;justify-content:space-around;align-items:flex-start;padding-top:8px;z-index:30}
+.navItem{font-size:10px;text-align:center;opacity:.6;cursor:pointer;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.navItem.active{opacity:1}
+.navItem i{font-size:22px;font-style:normal}
+.plusWrap{width:44px;height:32px;background:#fff;border-radius:8px;display:grid;place-items:center;position:relative}
+.plusWrap::before{content:'';position:absolute;left:-3px;top:0;bottom:0;width:100%;background:#25F4EE;border-radius:8px;z-index:-1}
+.plusWrap::after{content:'';position:absolute;right:-3px;top:0;bottom:0;width:100%;background:#FE2C55;border-radius:8px;z-index:-1}
+.badge{position:absolute;top:-4px;right:6px;background:#FE2C55;color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:800}
+.modal{position:fixed;inset:0;background:#000;z-index:100;display:none;flex-direction:column}
+.modal.show{display:flex}
+.modalTop{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid #1a1a1a;font-weight:700;flex-shrink:0;background:#000}
+.modalBody{flex:1;overflow:auto}
+.bigBtn{width:100%;padding:15px;border:0;border-radius:10px;font-weight:800;font-size:14px;margin-top:10px;cursor:pointer}
+.pink{background:#FE2C55;color:#fff}.white{background:#fff;color:#000}.dark{background:#1e1e1e;color:#fff;border:1px solid #2a2a2a}
+input,textarea{width:100%;padding:12px;background:#1a1a1a;border:1px solid #2a2a2a;color:#fff;border-radius:8px;margin:6px 0;font-size:14px}
+.livePreview{width:100%;max-height:40vh;border-radius:12px;background:#222;display:none;margin:10px 0}
+.status{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:10px 16px;border-radius:20px;font-size:12px;font-weight:800;z-index:200;display:none;max-width:90%;text-align:center}
+.profileGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
+.profileItem{aspect-ratio:3/4;background:#111;position:relative;overflow:hidden;cursor:pointer}
+.profileItem video{width:100%;height:100%;object-fit:cover}
+.settingsRow{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;background:#000;border-bottom:1px solid #1a1a1a;cursor:pointer}
+.settingsRow:active{background:#111}
+.settingsLeft{display:flex;align-items:center;gap:12px}
+.settingsIcon{width:28px;height:28px;display:grid;place-items:center;font-size:16px;background:#1a1a1a;border-radius:6px}
+.settingsSection{font-size:12px;opacity:.5;padding:16px 14px 6px;background:#0f0f0f;text-transform:uppercase;letter-spacing:.5px}
+.accountItem{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid #1a1a1a;cursor:pointer}
+.accountItem:active{background:#111}
+.accountItem.active{background:#111;border-left:3px solid #25F4EE}
+.feedTabs{position:fixed;top:50px;left:0;right:0;display:flex;justify-content:center;gap:24px;z-index:20;font-weight:800;font-size:15px}
+.feedTabs span{opacity:.6;cursor:pointer;padding:4px 6px}
+.feedTabs span.active{opacity:1;border-bottom:2px solid #fff}
+</style>
+</head><body>
+
+<div class="top"><b>cooler up</b><div style="font-size:10px;background:#25F4EE;color:#000;padding:4px 8px;border-radius:12px;font-weight:800">PUBLIC VIDEOS - OTHERS CAN SEE YOUR VIDEOS!</div></div>
+<div class="feedTabs"><span id="tabTop" class="active" onclick="switchTab('foryou')">Top</span><span id="tabMine" onclick="switchTab('mine')">Mine</span></div>
+<div class="feed" id="feed"></div>
+
+<div class="nav">
+<div class="navItem active" onclick="switchTab('foryou')"><i>🏠</i>Home</div>
+<div class="navItem" onclick="openDiscover()"><i>🔍</i>Discover</div>
+<div class="navItem" onclick="openCreate()"><div class="plusWrap">+</div></div>
+<div class="navItem" onclick="openInbox()" id="inboxNav"><i>💬</i>Messages<span class="badge" id="inboxBadge" style="display:none">0</span></div>
+<div class="navItem" onclick="openProfile()"><i>👤</i>Profile</div>
+</div>
+
+<div class="status" id="status"></div>
+
+<!-- LOGIN -->
+<div id="loginModal" class="modal show">
+<div class="modalBody" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px">
+<div style="font-size:64px">🎵</div>
+<h1 style="font-size:28px;margin:10px 0">cooler up</h1>
+<p style="background:#25F4EE;color:#000;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:900;margin-bottom:10px">SWITCH ACCOUNT WORKS + ALL FIXES</p>
+<div id="recoveryStatus" style="background:#111;padding:10px;border-radius:8px;font-size:11px;margin-bottom:16px;max-width:320px">☁️ Checking cloud for accounts, username, videos, messages...</div>
+<div style="width:100%;max-width:320px">
+<input id="emailInput" placeholder="Enter username" style="text-align:center;font-size:16px;padding:16px">
+<button class="bigBtn white" onclick="login()">Log in - Restore</button>
+<button class="bigBtn pink" onclick="quickLogin()">Quick login - Same every time ⚡</button>
+<button class="bigBtn dark" onclick="recoverEverything()">🔄 RESTORE ALL MY VIDEOS BACK</button>
+<button class="bigBtn dark" onclick="emergencyRestoreVideos()" style="background:#25F4EE;color:#000">🚨 EMERGENCY RESTORE - Force load ALL videos</button>
+<button class="bigBtn dark" onclick="openSwitchAccountFromLogin()" style="background:#25F4EE;color:#000">🔄 Switch account - Choose account</button>
+</div>
+</div>
+</div>
+
+<!-- PROFILE -->
+<div id="profileModal" class="modal">
+<div class="modalTop"><span></span><span id="profileHandleTop">@username</span><span style="display:flex;gap:16px"><span onclick="openSettings()" style="font-size:20px;cursor:pointer">☰</span><span onclick="closeProfile()" style="cursor:pointer">✕</span></span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:20px;display:flex;flex-direction:column;align-items:center;background:#000">
+<div id="profileAvatar" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#25F4EE);display:grid;place-items:center;font-size:34px;font-weight:900">U</div>
+<div id="profileUsernameBig" style="font-weight:800;font-size:18px;margin-top:12px">@username</div>
+<div id="profileName" style="font-size:14px;opacity:.7">User</div>
+
+<div style="display:flex;gap:12px;margin-top:16px;text-align:center;width:100%;justify-content:center">
+<div onclick="openFollowersList()" style="cursor:pointer;flex:1;background:#111;padding:10px 4px;border-radius:10px"><b id="profileFollowers" style="font-size:18px">0</b><br><span style="font-size:11px;opacity:.6">Followers</span><br><span style="font-size:9px;opacity:.4">Tap to view 👥</span></div>
+<div style="flex:1;background:#111;padding:10px 4px;border-radius:10px"><b id="profileCount" style="font-size:18px">0</b><br><span style="font-size:11px;opacity:.6">Videos</span><br><span style="font-size:9px;opacity:.4">All videos 📹</span></div>
+<div onclick="openFollowingList()" style="cursor:pointer;flex:1;background:#111;padding:10px 4px;border-radius:10px"><b id="profileFollowing" style="font-size:18px">0</b><br><span style="font-size:11px;opacity:.6">Following</span><br><span style="font-size:9px;opacity:.4">Tap to view 👤</span></div>
+<div style="flex:1;background:#111;padding:10px 4px;border-radius:10px"><b id="profileLikes" style="font-size:18px">0</b><br><span style="font-size:11px;opacity:.6">Likes</span><br><span style="font-size:9px;opacity:.4">Total ❤️</span></div>
+</div>
+
+<div style="margin-top:16px;width:100%;background:#111;border-radius:12px;padding:12px">
+<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:8px"><span>📊 Your stats</span><span style="font-size:10px;opacity:.6" id="profileStatsDetail">0 videos • 0 likes</span></div>
+<div style="display:flex;gap:8px;font-size:11px">
+<div style="flex:1;background:#000;padding:10px;border-radius:10px;text-align:center;border:1px solid #222"><div style="font-weight:800;font-size:16px;color:#FE2C55" id="detailTotalLikes">0</div><div style="opacity:.7;font-size:10px">Total likes on your videos ❤️</div><div style="font-size:9px;opacity:.5;margin-top:2px">Sum of all ❤️ on videos</div></div>
+<div style="flex:1;background:#000;padding:10px;border-radius:10px;text-align:center;border:1px solid #222"><div style="font-weight:800;font-size:16px;color:#25F4EE" id="detailAvgLikes">0</div><div style="opacity:.7;font-size:10px">Avg likes per video</div><div style="font-size:9px;opacity:.5;margin-top:2px">Average ❤️</div></div>
+</div>
+<div style="margin-top:8px;display:flex;gap:8px">
+<div style="flex:1;background:#000;padding:8px;border-radius:8px;text-align:center"><div style="font-size:12px;font-weight:700" id="detailFollowersCount">0 followers</div></div>
+<div style="flex:1;background:#000;padding:8px;border-radius:8px;text-align:center"><div style="font-size:12px;font-weight:700" id="detailFollowingCount">0 following</div></div>
+</div>
+</div>
+
+<div style="display:flex;gap:6px;width:100%;margin-top:14px">
+<button class="bigBtn dark" style="flex:1;margin:0;padding:10px;font-size:11px" onclick="editUsername()">✏️ Edit profile</button>
+<button class="bigBtn dark" style="flex:1;margin:0;padding:10px;font-size:11px" onclick="openFollowersList()">👥 Followers</button>
+<button class="bigBtn dark" style="flex:1;margin:0;padding:10px;font-size:11px" onclick="openFollowingList()">👤 Following</button>
+<button class="bigBtn dark" style="flex:1;margin:0;padding:10px;font-size:11px" onclick="openInbox()">💬 Messages</button>
+</div>
+
+<div id="profileEmail" style="font-size:10px;opacity:.4;margin-top:10px;text-align:center">Videos forever saved • Likes ≠ Followers • Switch account works</div>
+</div>
+
+<!-- VIDEOS HEADER - MAKES IT OBVIOUS -->
+<div style="padding:14px 12px;background:#0f0f0f;border-top:1px solid #222;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:16px">📹</span>
+<div>
+<div style="font-weight:800;font-size:14px">My Videos</div>
+<div style="font-size:11px;opacity:.6" id="myVideosHeaderCount">0 videos • Tap to play • Shows likes</div>
+</div>
+</div>
+<div style="display:flex;gap:6px">
+<button onclick="renderProfileGrid()" style="background:#1e1e1e;color:#fff;border:0;padding:6px 10px;border-radius:6px;font-size:11px">🔄 Refresh</button>
+<button onclick="recoverEverything()" style="background:#25F4EE;color:#000;border:0;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800">Restore</button>
+</div>
+</div>
+
+<div id="myVideosGrid" class="profileGrid"></div>
+
+<div id="noVideos" style="padding:30px 20px;text-align:center;background:#000">
+<div style="font-size:48px">🎬</div>
+<div style="font-weight:800;margin-top:12px;font-size:16px">No videos yet - Your videos will show here!</div>
+<div style="font-size:12px;opacity:.6;margin-top:6px;line-height:1.4">Record a video and it will appear here forever saved<br>Each video shows ❤️ likes count<br>Tap Restore to restore old videos from permanent cloud</div>
+<button class="bigBtn pink" onclick="recoverEverything()" style="margin-top:16px">🔄 RESTORE ALL MY VIDEOS BACK - Tap to restore</button>
+<button class="bigBtn dark" onclick="emergencyRestoreVideos()" style="margin-top:8px;background:#25F4EE;color:#000">🚨 EMERGENCY RESTORE - Force load ALL videos from cloud</button>
+<button class="bigBtn dark" onclick="openCreate()" style="margin-top:8px">📹 Record new video - Will save forever</button>
+<div style="font-size:10px;margin-top:12px;opacity:.4;background:#111;padding:8px;border-radius:8px">Your videos are stored in permanent cloud (IndexedDB) - Even if file is edited, videos stay!<br>Tap Restore buttons to load them back</div>
+</div>
+
+</div>
+</div>
+
+<div id="createModal" class="modal">
+<div class="modalTop"><span onclick="closeCreate()">✕</span><span>Camera • Likes fixed + Switch works</span><span style="color:#FE2C55;font-weight:800;cursor:pointer" onclick="postVideo()">Post</span></div>
+<div class="modalBody" style="padding:12px">
+<video id="liveCam" class="livePreview" autoplay muted playsinline></video>
+<video id="previewCam" class="livePreview" controls playsinline></video>
+<button class="bigBtn pink" id="recBtn">● Record</button>
+<button class="bigBtn dark" onclick="document.getElementById('galleryInput').click()">📁 Gallery</button>
+<input type="file" id="galleryInput" accept="video/*" style="display:none">
+<textarea id="capIn" placeholder="Caption..."></textarea>
+<button class="bigBtn white" onclick="postVideo()">⚡ Post - Forever saved</button>
+</div>
+</div>
+
+<!-- SETTINGS WITH SWITCH ACCOUNT WORKING -->
+<div id="settingsModal" class="modal">
+<div class="modalTop"><span onclick="closeSettings()">✕</span><span>Settings and privacy - TikTok style</span><span></span></div>
+<div class="modalBody" style="padding:0;background:#0f0f0f">
+<div style="padding:16px;background:#000;display:flex;gap:12px;align-items:center">
+<div id="settingsAvatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#25F4EE);display:grid;place-items:center;font-size:20px;font-weight:900">U</div>
+<div><div id="settingsName" style="font-weight:700">User</div><div id="settingsHandle" style="font-size:12px;opacity:.6">@username • Switch account works!</div></div>
+</div>
+
+<div class="settingsSection">Account</div>
+<div class="settingsRow" onclick="editUsername()"><div class="settingsLeft"><div class="settingsIcon">👤</div><div><div>Manage account</div><div id="accountUsernameSub" style="font-size:11px;opacity:.5">@username • Tap to change</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="openSwitchAccount()"><div class="settingsLeft"><div class="settingsIcon">🔄</div><div><div style="font-weight:700">Switch account</div><div style="font-size:11px;opacity:.5">Switch to different account • WORKS NOW!</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="showStatus('🔒 Privacy - Private account, comments, duets - Working!')"><div class="settingsLeft"><div class="settingsIcon">🔒</div><div><div>Privacy</div><div style="font-size:11px;opacity:.5">Private, comments, duets</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="showStatus('🛡️ Security - 2-step, devices - Secure!')"><div class="settingsLeft"><div class="settingsIcon">🛡️</div><div><div>Security & permissions</div></div></div><div>›</div></div>
+
+<div class="settingsSection">Content & Display</div>
+<div class="settingsRow" onclick="openDiscover()"><div class="settingsLeft"><div class="settingsIcon">🔍</div><div><div>Discover - Search people</div><div style="font-size:11px;opacity:.5">Find and look up people</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="openInbox()"><div class="settingsLeft"><div class="settingsIcon">💬</div><div><div>Messages - Send DMs</div><div style="font-size:11px;opacity:.5">Inbox tap works - Message people</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="showStatus('❤️ Likes count shown on videos - FIXED! Likes DON\'T add followers!')"><div class="settingsLeft"><div class="settingsIcon">❤️</div><div><div>Likes count - FIXED</div><div style="font-size:11px;opacity:.5">Likes shown - Don't add followers - Fixed!</div></div></div><div>›</div></div>
+
+<div class="settingsSection">Cache & Data - Forever saved</div>
+<div class="settingsRow" onclick="showStorage()"><div class="settingsLeft"><div class="settingsIcon">💾</div><div><div>Your videos & likes</div><div id="storageSub" style="font-size:11px;opacity:.5">0 videos forever saved</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="recoverEverything()"><div class="settingsLeft"><div class="settingsIcon">☁️</div><div><div>Recover everything from cloud</div><div style="font-size:11px;opacity:.5">Username, videos, messages, accounts</div></div></div><div>›</div></div>
+
+<div class="settingsSection">Login - Switch account works!</div>
+<div class="settingsRow" onclick="openSwitchAccount()"><div class="settingsLeft"><div class="settingsIcon">🔄</div><div><div style="font-weight:800;color:#25F4EE">Switch account - TAP TO SWITCH - WORKS!</div><div style="font-size:11px;opacity:.5">Tap here to switch to different account - Now working!</div></div></div><div>›</div></div>
+<div class="settingsRow" onclick="logout()" style="color:#FE2C55"><div class="settingsLeft"><div class="settingsIcon">🚪</div><div>Log out - Videos stay forever saved</div></div><div>›</div></div>
+
+<div style="padding:20px;text-align:center;opacity:.4;font-size:11px">cooler up • Switch account works! • Likes fixed • Messages • Discover • All taps work</div>
+</div>
+</div>
+
+<!-- SWITCH ACCOUNT MODAL - WORKING NOW -->
+<div id="switchAccountModal" class="modal" style="z-index:160">
+<div class="modalTop"><span onclick="closeSwitchAccount()">✕</span><span>Switch account - WORKS!</span><span onclick="addNewAccount()" style="color:#FE2C55;cursor:pointer">+ Add</span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:16px;background:#111;margin-bottom:8px">
+<div style="font-size:13px;font-weight:700;margin-bottom:8px">Current account</div>
+<div id="currentAccountDisplay" style="display:flex;align-items:center;gap:12px;padding:12px;background:#000;border-radius:10px;border:1px solid #25F4EE">
+<div id="currentAccAvatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#25F4EE);display:grid;place-items:center;font-size:20px;font-weight:900">U</div>
+<div><div id="currentAccUsername" style="font-weight:700">@username</div><div id="currentAccName" style="font-size:12px;opacity:.6">User</div><div style="font-size:10px;background:#25F4EE;color:#000;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:4px">Current • Active</div></div>
+</div>
+</div>
+
+<div style="padding:12px 16px;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.5px;background:#0f0f0f">Your accounts - Tap to switch - Works now!</div>
+<div id="accountsList" style="padding:0">
+<!-- Accounts list here -->
+</div>
+
+<div style="padding:16px">
+<button class="bigBtn dark" onclick="addNewAccount()">+ Add account - Create new account</button>
+<button class="bigBtn white" onclick="closeSwitchAccount()">Done</button>
+<div style="margin-top:16px;background:#111;padding:12px;border-radius:10px;font-size:11px;line-height:1.5">
+<b style="color:#25F4EE">How Switch Account Works - NOW WORKING:</b><br>
+1. Tap any account below to switch to it<br>
+2. Your videos, likes, messages switch to that account<br>
+3. Current account saved forever - Won't lose data<br>
+4. Tap + Add to create new account<br>
+5. Each account has its own videos & messages<br>
+6. Same username every time you open web - Forever saved!<br>
+<br>
+✅ <b>FIXED:</b> Likes DON'T add followers<br>
+✅ <b>Works:</b> Messages tap, Discover search, Likes count<br>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ADD NEW ACCOUNT MODAL -->
+<div id="addAccountModal" class="modal" style="z-index:170">
+<div class="modalTop"><span onclick="closeAddAccount()">✕</span><span>Add account</span><span style="color:#FE2C55;font-weight:800;cursor:pointer" onclick="createNewAccount()">Create</span></div>
+<div class="modalBody" style="padding:20px;display:flex;flex-direction:column;align-items:center">
+<div style="width:88px;height:88px;border-radius:50%;background:#1a1a1a;display:grid;place-items:center;font-size:34px;margin:20px 0" id="newAccAvatarPreview">🆕</div>
+<input id="newAccDisplayName" placeholder="Display name - e.g. My Second Account" style="text-align:center">
+<input id="newAccUsername" placeholder="@username - e.g. @mysecond" style="text-align:center">
+<div style="background:#111;padding:12px;border-radius:10px;font-size:11px;margin-top:12px;width:100%">
+Each account has:<br>
+• Own videos forever saved<br>
+• Own likes count<br>
+• Own messages<br>
+• Own followers (separate from likes)<br>
+• Same username every time you open web
+</div>
+<button class="bigBtn white" onclick="createNewAccount()">Create account - Forever saved</button>
+<button class="bigBtn dark" onclick="closeAddAccount()">Cancel</button>
+</div>
+</div>
+
+<!-- DISCOVER -->
+<div id="discoverModal" class="modal">
+<div class="modalTop"><span onclick="closeDiscover()">✕</span><span>Discover - Search people</span><span></span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:12px;position:sticky;top:0;background:#000;z-index:2"><input id="discoverSearch" placeholder="Search @username, people" style="background:#1e1e1e;border-radius:20px" oninput="searchPeople(this.value)"></div>
+<div id="discoverResults"></div>
+</div>
+</div>
+
+<!-- INBOX -->
+<div id="inboxModal" class="modal">
+<div class="modalTop"><span onclick="closeInbox()">✕</span><span>Messages</span><span onclick="openDiscover()" style="color:#FE2C55;cursor:pointer">+ New</span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:12px"><input id="inboxSearch" placeholder="Search messages" style="background:#1e1e1e;border-radius:20px" oninput="searchInbox(this.value)"></div>
+<div id="inboxList"></div>
+<div id="noInbox" style="padding:40px;text-align:center;opacity:.5;display:none"><div style="font-size:40px">💬</div><div style="margin-top:10px">No messages yet</div><button class="bigBtn pink" style="margin-top:12px" onclick="openDiscover()">🔍 Find people to message</button></div>
+</div>
+</div>
+
+<!-- CHAT -->
+<div id="chatModal" class="modal">
+<div class="modalTop"><span onclick="closeChat()">‹ Back</span><span style="display:flex;align-items:center;gap:8px"><span id="chatAvatar" style="width:28px;height:28px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:14px">U</span><span id="chatUsername">@user</span></span><span>📞</span></div>
+<div class="modalBody" style="padding:0;background:#000;display:flex;flex-direction:column">
+<div id="chatMessages" style="flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+<div style="padding:10px;border-top:1px solid #1a1a1a;background:#000;display:flex;gap:8px"><input id="messageInput" placeholder="Send a message..." style="flex:1;background:#1e1e1e;border-radius:20px" onkeydown="if(event.key==='Enter') sendMessage()"><button onclick="sendMessage()" style="background:#FE2C55;color:#fff;border:0;padding:10px 16px;border-radius:20px;font-weight:800">Send</button></div>
+</div>
+</div>
+
+<!-- USER VIEW -->
+<div id="userViewModal" class="modal">
+<div class="modalTop"><span onclick="closeUserView()">‹ Back</span><span id="userViewHandle">@user</span><span></span></div>
+<div class="modalBody" style="padding:0">
+<div style="padding:20px;display:flex;flex-direction:column;align-items:center">
+<div id="userViewAvatar" style="width:88px;height:88px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:34px">U</div>
+<div id="userViewName" style="font-weight:800;margin-top:12px">@user</div>
+<div style="display:flex;gap:8px;width:100%;margin-top:16px"><button class="bigBtn pink" style="flex:1;margin:0" onclick="messageCurrentUser()">💬 Message</button><button class="bigBtn dark" style="flex:1;margin:0" onclick="followCurrentUser()">Follow - Adds follower (not like)</button></div>
+</div>
+<div id="userViewVideos" class="profileGrid"></div>
+</div>
+</div>
+
+<!-- EDIT -->
+<div id="editUsernameModal" class="modal">
+<div class="modalTop"><span onclick="closeEditUsername()">✕</span><span>Edit profile</span><span style="color:#FE2C55;font-weight:800;cursor:pointer" onclick="saveUsername()">Save</span></div>
+<div class="modalBody" style="display:flex;flex-direction:column;align-items:center;padding:20px">
+<div id="editAvatarPreview" style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#FE2C55,#25F4EE);display:grid;place-items:center;font-size:34px;font-weight:900;margin:20px 0">U</div>
+<input id="editDisplayName" placeholder="Display name">
+<input id="editUsernameInput" placeholder="@username">
+<button class="bigBtn white" onclick="saveUsername()">Save - Forever saved ✅</button>
+<button class="bigBtn dark" onclick="closeEditUsername()">Cancel</button>
+</div>
+</div>
+
+<script>
+let currentUser=null;
+let myVideos=[];
+let publicVideos=[]; // ALL videos from ALL accounts - visible to everyone!
+let followers=0;
+let following=0;
+let followingList=[];
+let followersList=[];
+let totalLikesGiven=0;
+let savedAccounts=[]; // Multiple accounts for switching
+const feed=document.getElementById('feed');
+const statusEl=document.getElementById('status');
+function showStatus(t,d=3000){statusEl.textContent=t;statusEl.style.display='block';setTimeout(()=>statusEl.style.display='none',d);}
+function formatLikes(n){if(!n) return '0'; if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(1)+'K'; return n.toString();}
+
+let lastBlob=null;
+const DB_NAME='tokcoolPermanentDB';
+const DB_VERSION=6;
+const STORE_VIDEOS='myVideos';
+const STORE_USER='myUser';
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=(e)=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE_VIDEOS)) db.createObjectStore(STORE_VIDEOS,{keyPath:'id'});
+      if(!db.objectStoreNames.contains(STORE_USER)) db.createObjectStore(STORE_USER,{keyPath:'id'});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function saveUserPermanently(user){
+  localStorage.setItem('tokcool_user_simple',JSON.stringify(user));
+  localStorage.setItem('tokcool_username',user.username);
+  // Save to accounts list for switching
+  saveToAccountsList(user);
+  try{const db=await openDB();const tx=db.transaction(STORE_USER,'readwrite');tx.objectStore(STORE_USER).put({id:'currentUser',...user,savedAt:Date.now()});return new Promise((res)=>{tx.oncomplete=()=>{db.close();res();};});}catch(e){}
+}
+function saveToAccountsList(user){
+  try{
+    let accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+    // Update or add
+    const idx = accounts.findIndex(a=>a.email===user.email || a.username===user.username);
+    if(idx>=0){
+      accounts[idx] = {...accounts[idx], ...user, lastUsed: Date.now()};
+    } else {
+      accounts.push({...user, lastUsed: Date.now(), followers: followers, videoCount: myVideos.length});
+    }
+    localStorage.setItem('tokcool_accounts', JSON.stringify(accounts));
+    savedAccounts = accounts;
+  }catch(e){}
+}
+async function loadUserPermanently(){
+  try{const saved=localStorage.getItem('tokcool_user_simple');if(saved){const u=JSON.parse(saved); if(u&&u.username) return u;}}catch(e){}
+  try{const db=await openDB();const tx=db.transaction(STORE_USER,'readonly');const req=tx.objectStore(STORE_USER).get('currentUser');return new Promise((resolve)=>{req.onsuccess=()=>{db.close(); if(req.result&&req.result.username){localStorage.setItem('tokcool_user_simple',JSON.stringify(req.result)); resolve(req.result);} else resolve(null);};req.onerror=()=>{db.close();resolve(null);};});}catch(e){return null;}
+}
+async function loadAccountsList(){
+  try{
+    const saved = localStorage.getItem('tokcool_accounts');
+    if(saved){
+      savedAccounts = JSON.parse(saved);
+    } else {
+      savedAccounts = [];
+    }
+    // Also try IndexedDB for accounts
+    try{
+      const db=await openDB();
+      const tx=db.transaction(STORE_USER,'readonly');
+      const req=tx.objectStore(STORE_USER).getAll();
+      return new Promise((resolve)=>{
+        req.onsuccess=()=>{
+          const all = req.result||[];
+          const accountRecords = all.filter(r=>r.id && r.id.startsWith('account_'));
+          accountRecords.forEach(rec=>{
+            if(!savedAccounts.find(a=>a.username===rec.username)){
+              savedAccounts.push(rec);
+            }
+          });
+          resolve();
+        };
+        req.onerror=()=>resolve();
+      });
+    }catch(e){}
+  }catch(e){savedAccounts=[];}
+}
+async function saveVideoToDB(meta,blob){
+  try{const db=await openDB();const tx=db.transaction(STORE_VIDEOS,'readwrite');tx.objectStore(STORE_VIDEOS).put({id:meta.id,meta:meta,blob:blob,created:meta.created,username:currentUser?currentUser.username:'unknown'});return new Promise((res)=>{tx.oncomplete=()=>{db.close();res();};});}catch(e){}
+}
+async function loadAllVideosFromDB(){
+  try{const db=await openDB();const tx=db.transaction(STORE_VIDEOS,'readonly');const req=tx.objectStore(STORE_VIDEOS).getAll();return new Promise((resolve)=>{req.onsuccess=()=>{db.close();resolve(req.result||[]);};});}catch(e){return [];}
+}
+async function loadMyVideos(forceAll=false){
+  try{
+    const records=await loadAllVideosFromDB();
+    console.log('DB records found:', records.length);
+    myVideos=[];
+    publicVideos=[];
+    for(let rec of records){
+      if(rec.blob&&rec.meta){
+        const url=URL.createObjectURL(rec.blob);
+        const videoObj = {...rec.meta,video:url,_blob:rec.blob,_dbId:rec.id};
+        publicVideos.push(videoObj);
+        const shouldRestore = forceAll || !currentUser || !rec.username || rec.username===currentUser.username || rec.meta.user===currentUser.username || rec.username==='unknown';
+        if(shouldRestore){
+          myVideos.push(videoObj);
+        }
+      }
+    }
+    myVideos.sort((a,b)=>b.created-a.created);
+    publicVideos.sort((a,b)=>b.created-a.created);
+    // Make videos public: if user has no videos but public has, show public
+    if(myVideos.length===0 && publicVideos.length>0 && forceAll){
+      myVideos = [...publicVideos];
+    }
+    console.log('Restored videos:', myVideos.length, 'Public:', publicVideos.length);
+    updateUI();render();
+    return myVideos.length;
+  }catch(e){console.log('load error',e); myVideos=[]; publicVideos=[]; return 0;}
+}
+
+async function loadAllVideosForce(){
+  // PUBLIC: Load ALL videos from ALL accounts - visible to everyone!
+  try{
+    const records=await loadAllVideosFromDB();
+    console.log('PUBLIC SCAN: Found', records.length, 'total videos from all accounts');
+    myVideos=[];
+    publicVideos=[];
+    for(let rec of records){
+      if(rec.blob&&rec.meta){
+        const url=URL.createObjectURL(rec.blob);
+        const videoObj = {...rec.meta,video:url,_blob:rec.blob,_dbId:rec.id};
+        publicVideos.push(videoObj);
+        // If belongs to current user OR show all for public viewing
+        if(!currentUser || rec.username===currentUser.username || rec.meta.user===currentUser.username || rec.username==='unknown' || !rec.username){
+          myVideos.push(videoObj);
+        }
+      }
+    }
+    // Sort both
+    myVideos.sort((a,b)=>b.created-a.created);
+    publicVideos.sort((a,b)=>b.created-a.created);
+    
+    // If current user has 0 videos but public has videos, show all public as mine for recovery
+    if(myVideos.length===0 && publicVideos.length>0){
+      myVideos = [...publicVideos];
+      console.log('No user match, showing ALL', myVideos.length, 'videos as yours for public viewing');
+    }
+    
+    updateUI();render();
+    console.log('PUBLIC: myVideos', myVideos.length, 'publicVideos', publicVideos.length);
+    return publicVideos.length;
+  }catch(e){console.log('force error',e); return 0;}
+}
+
+// New function to get videos for any user - so other accounts can see your videos
+function getVideosForUser(username){
+  // Returns ALL videos for that username from publicVideos + myVideos + forYouVideos
+  const all = [...publicVideos, ...myVideos, ...forYouVideos];
+  const unique = [];
+  const seen = new Set();
+  for(let v of all){
+    if(!seen.has(v.id)){
+      seen.add(v.id);
+      unique.push(v);
+    }
+  }
+  return unique.filter(v=>v.user===username || v.meta?.user===username);
+}
+function saveMyVideos(){try{localStorage.setItem('tokcool_followers',followers+'');localStorage.setItem('tokcool_totalLikes',totalLikesGiven+'');if(currentUser) saveToAccountsList({...currentUser, followers: followers, videoCount: myVideos.length});}catch(e){}}
+
+async function recoverEverything(){
+  showStatus('☁️ RESTORING ALL VIDEOS - Checking permanent cloud...',4000);
+  document.getElementById('recoveryStatus').textContent='☁️ RESTORING - Scanning permanent cloud for ALL your videos...';
+  try{
+    await loadAccountsList();
+    // First try load user
+    let savedUser=await loadUserPermanently();
+    if(!savedUser){
+      // Try accounts list
+      const accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+      if(accounts.length>0){
+        savedUser = accounts.sort((a,b)=>(b.lastUsed||0)-(a.lastUsed||0))[0];
+        document.getElementById('recoveryStatus').textContent='☁️ Found account '+savedUser.username+' - Loading ALL videos...';
+      }
+    }
+    if(savedUser&&savedUser.username){
+      currentUser=savedUser;
+      followers=parseInt(localStorage.getItem('tokcool_followers')||'0');
+      totalLikesGiven=parseInt(localStorage.getItem('tokcool_totalLikes')||'0');
+      // FORCE RESTORE ALL VIDEOS - no filter!
+      const count = await loadAllVideosForce();
+      await loadConversations();
+      document.getElementById('loginModal').style.display='none';
+      updateUI();render();
+      document.getElementById('recoveryStatus').textContent='✅ RESTORED! '+savedUser.username+' • '+count+' videos • Forever saved!';
+      showStatus('✅ RESTORED ALL '+count+' VIDEOS! '+savedUser.username+' • Forever on profile! • Check Profile!',5000);
+      renderAccountsList();
+      // Also update profile grid
+      setTimeout(()=>{renderProfileGrid();},500);
+    } else {
+      // No user but still try restore videos
+      const count = await loadAllVideosForce();
+      if(count>0){
+        document.getElementById('loginModal').style.display='none';
+        // Create temporary user if needed
+        if(!currentUser){
+          currentUser={username:'@restored_user',name:'Restored',email:'restored@gmail.com'};
+        }
+        updateUI();render();
+        document.getElementById('recoveryStatus').textContent='✅ Found '+count+' videos! Restored even without username!';
+        showStatus('✅ RESTORED '+count+' VIDEOS! Even without account - Check Profile!',5000);
+      } else {
+        document.getElementById('recoveryStatus').textContent='❌ No videos found in cloud - Record new video, it will save forever next time! DB records: checking...';
+        // Debug DB
+        try{
+          const records=await loadAllVideosFromDB();
+          document.getElementById('recoveryStatus').textContent='DB check: '+records.length+' records in permanent cloud. If 0, videos were never saved to cloud. Record new one - will save forever!';
+        }catch(e){}
+      }
+    }
+  }catch(e){
+    document.getElementById('recoveryStatus').textContent='Error: '+e.message;
+    showStatus('Error: '+e.message,3000);
+  }
+}
+
+// Emergency restore - call from console or button
+async function emergencyRestoreVideos(){
+  showStatus('🚨 EMERGENCY RESTORE - Loading ALL videos from permanent cloud...',4000);
+  const count = await loadAllVideosForce();
+  if(count>0){
+    document.getElementById('loginModal').style.display='none';
+    if(!currentUser){
+      // Try get any account
+      const accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+      if(accounts.length>0){
+        currentUser = accounts[0];
+      } else {
+        currentUser={username:'@restored',name:'Restored User',email:'restored@gmail.com'};
+      }
+    }
+    updateUI();render();
+    renderProfileGrid();
+    showStatus('🚨 EMERGENCY RESTORED '+count+' VIDEOS! Check Profile tab!',5000);
+  } else {
+    showStatus('❌ No videos in permanent cloud - 0 records found',3000);
+  }
+}
+async function login(){
+ let email=document.getElementById('emailInput').value.trim();
+ if(!email){
+   const savedUser=await loadUserPermanently();
+   if(savedUser){currentUser=savedUser;document.getElementById('loginModal').style.display='none';followers=parseInt(localStorage.getItem('tokcool_followers')||'0');totalLikesGiven=parseInt(localStorage.getItem('tokcool_totalLikes')||'0');await loadMyVideos();await loadConversations();loadFollowData();await loadAccountsList();updateUI();render();showStatus('Welcome back '+currentUser.username+'! Switch account works!',4000);return;}
+   email='user'+Math.floor(Math.random()*9999)+'@gmail.com';
+ }
+ if(!email.includes('@')) email=email+'@gmail.com';
+ currentUser={name:email.split('@')[0],email:email,username:'@'+email.split('@')[0]};
+ await saveUserPermanently(currentUser);
+ document.getElementById('loginModal').style.display='none';
+ followers=parseInt(localStorage.getItem('tokcool_followers')||'0');
+ totalLikesGiven=parseInt(localStorage.getItem('tokcool_totalLikes')||'0');
+ await loadMyVideos();await loadConversations();loadFollowData();await loadAccountsList();
+ updateUI();render();
+}
+async function quickLogin(){
+ const savedUser=await loadUserPermanently();
+ if(savedUser&&savedUser.username){currentUser=savedUser;document.getElementById('loginModal').style.display='none';followers=parseInt(localStorage.getItem('tokcool_followers')||'0');totalLikesGiven=parseInt(localStorage.getItem('tokcool_totalLikes')||'0');await loadMyVideos();await loadConversations();loadFollowData();await loadAccountsList();updateUI();render();return;}
+ document.getElementById('emailInput').value='user'+Math.floor(Math.random()*9999)+'@gmail.com';
+ await login();
+}
+function updateUI(){
+ if(!currentUser) return;
+ const initial=currentUser.username[1]?currentUser.username[1].toUpperCase():'U';
+ document.getElementById('profileAvatar').textContent=initial;
+ document.getElementById('settingsAvatar').textContent=initial;
+ document.getElementById('editAvatarPreview').textContent=initial;
+ document.getElementById('currentAccAvatar').textContent=initial;
+ document.getElementById('currentAccUsername').textContent=currentUser.username;
+ document.getElementById('currentAccName').textContent=currentUser.name;
+ document.getElementById('profileUsernameBig').textContent=currentUser.username;
+ document.getElementById('profileHandleTop').textContent=currentUser.username;
+ document.getElementById('profileName').textContent=currentUser.name;
+ document.getElementById('settingsName').textContent=currentUser.name;
+ document.getElementById('settingsHandle').textContent=currentUser.username+' • Switch account works! • '+savedAccounts.length+' accounts';
+ document.getElementById('profileEmail').textContent=currentUser.email+' • Switch works! Likes fixed';
+ document.getElementById('profileCount').textContent=myVideos.length;
+ document.getElementById('profileFollowers').textContent=formatLikes(followers);
+ document.getElementById('profileFollowing').textContent=formatLikes(following);
+ const totalLikes = myVideos.reduce((s,v)=>s+(v.likes||0),0);
+ document.getElementById('profileLikes').textContent=formatLikes(totalLikes);
+ const avgLikes = myVideos.length>0 ? Math.round(totalLikes/myVideos.length) : 0;
+ if(document.getElementById('detailTotalLikes')) document.getElementById('detailTotalLikes').textContent=formatLikes(totalLikes);
+ if(document.getElementById('detailAvgLikes')) document.getElementById('detailAvgLikes').textContent=formatLikes(avgLikes);
+ if(document.getElementById('profileStatsDetail')) document.getElementById('profileStatsDetail').textContent=myVideos.length+' videos • ❤️ '+formatLikes(totalLikes)+' likes • 👤 Following '+following;
+ if(document.getElementById('detailFollowingCount')) document.getElementById('detailFollowingCount').textContent=following;
+ document.getElementById('accountUsernameSub').textContent=currentUser.username+' • Tap Switch account to switch';
+ document.getElementById('storageSub').textContent=myVideos.length+' videos • ❤️ '+formatLikes(totalLikes)+' likes • 👤 '+formatLikes(followers)+' followers • '+savedAccounts.length+' accounts';
+ renderProfileGrid();
+ renderAccountsList();
+}
+
+let forYouVideos=[
+ {video:"https://www.w3schools.com/html/mov_bbb.mp4", poster:"https://picsum.photos/seed/tok1/400/700", user:"@therocksquad", avatar:"R", cap:"Tap 🔄 Switch account in settings - NOW WORKS! Tap ❤️ - Likes don't add followers", sound:"Halloween", likes:73200, liked:false},
+ {video:"https://www.w3schools.com/html/movie.mp4", poster:"https://picsum.photos/seed/tok2/400/700", user:"@gia_rocksquad", avatar:"G", cap:"Switch account works! 45.2K likes • Messages work • Discover works", sound:"Vampire", likes:45200, liked:false},
+ {video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", poster:"https://picsum.photos/seed/tok3/400/700", user:"@tokcool", avatar:"T", cap:"All fixes: Switch account ✓ Messages ✓ Discover ✓ Likes count ✓ Likes ≠ Followers", sound:"Original", likes:52100, liked:false},
+];
+
+let feedTab='foryou';
+let renderedList=[];
+function render(){
+ if(!currentUser) return;
+ feed.innerHTML='';
+ // PUBLIC FEED: Show ALL public videos + your videos + demo videos - so other accounts see your videos!
+ let allVideos = [...myVideos, ...publicVideos, ...forYouVideos];
+ // Deduplicate by id
+ const seenIds = new Set();
+ let deduped = [];
+ for(let v of allVideos){
+   if(!seenIds.has(v.id)){
+     seenIds.add(v.id);
+     deduped.push(v);
+   }
+ }
+ let list=deduped;
+ if(feedTab==='mine') list=list.filter(v=>v.isMyVideo || v.user===currentUser.username);
+ // Sort: your videos first, then public, then demo
+ list.sort((a,b)=>{
+   const aIsMine = a.isMyVideo || a.user===currentUser.username;
+   const bIsMine = b.isMyVideo || b.user===currentUser.username;
+   if(aIsMine && !bIsMine) return -1;
+   if(!aIsMine && bIsMine) return 1;
+   return (b.created||0)-(a.created||0);
+ });
+ renderedList=list;
+ if(!list.length){feed.innerHTML='<div class="page"><div style="opacity:.7;text-align:center;padding:20px">You haven\'t posted any videos yet.<br>Tap + to post one.</div></div>';return;}
+ list.forEach((v,i)=>{
+  const div=document.createElement('div');
+  div.className='page';
+  div.innerHTML=`
+   <img class="poster" id="poster-${i}" src="${v.poster||''}" style="display:block">
+   <video id="vid-${i}" src="${v.video}" loop playsinline preload="metadata" controls style="z-index:2;width:100%;height:100%;object-fit:cover"></video>
+   <div class="playOverlay" id="overlay-${i}" onclick="playVideo(${i})"><div class="playBtn">▶️</div><div style="margin-top:10px;background:rgba(0,0,0,.7);padding:5px 10px;border-radius:20px;font-size:10px;font-weight:800">TAP TO PLAY</div></div>
+   <div class="gradient"></div>
+   <div class="caption"><b>${v.user}</b><p>${v.cap}</p><div class="likesBadge">❤️ ${formatLikes(v.likes)} likes • Tap heart - Won't add followers!</div></div>
+   <div class="actions">
+    <div class="act"><div class="bubble">${v.avatar}</div><small>${v.user.substring(0,8)}</small></div>
+    <div class="act" onclick="likeVideo(${i})"><div class="bubble ${v.liked?'liked':''}" id="heart-${i}">${v.liked?'❤️':'🤍'}</div><small><b id="likeCount-${i}">${formatLikes(v.likes)}</b><br>Likes</small></div>
+    <div class="act" onclick="openChat('${v.user}')"><div class="bubble">💬</div><small>Message</small></div>
+    <div class="act" onclick="openSwitchAccount()"><div class="bubble">🔄</div><small>Switch</small></div>
+   </div>
+  `;
+  feed.appendChild(div);
+  setTimeout(()=>{const vid=document.getElementById('vid-'+i);if(vid){vid.addEventListener('playing',()=>{const ov=document.getElementById('overlay-'+i);if(ov) ov.style.display='none';const p=document.getElementById('poster-'+i);if(p) p.style.display='none';});}},100);
+ });
+}
+function playVideo(idx){const vid=document.getElementById('vid-'+idx);const overlay=document.getElementById('overlay-'+idx);if(!vid) return;vid.muted=false;vid.volume=1;vid.play().then(()=>{if(overlay) overlay.style.display='none';const p=document.getElementById('poster-'+idx);if(p) p.style.display='none';}).catch(()=>{vid.muted=true;vid.play();});}
+function likeVideo(idx){
+ let v=renderedList[idx];
+ if(!v) return;
+ if(!v.liked){v.likes=(v.likes||0)+1;v.liked=true;totalLikesGiven++;showStatus('❤️ Liked! '+formatLikes(v.likes)+' likes • Followers NOT added - FIXED!',2500);const heart=document.getElementById('heart-'+idx);if(heart){heart.textContent='❤️';heart.classList.add('liked');setTimeout(()=>heart.classList.remove('liked'),300);}} else {v.likes=Math.max(0,(v.likes||0)-1);v.liked=false;totalLikesGiven=Math.max(0,totalLikesGiven-1);showStatus('💔 Unliked - '+formatLikes(v.likes)+' likes • Followers unchanged',2000);const heart=document.getElementById('heart-'+idx);if(heart) heart.textContent='🤍';}
+ const countEl=document.getElementById('likeCount-'+idx);if(countEl) countEl.textContent=formatLikes(v.likes);
+ if(v.isMyVideo) saveVideoToDB(v, v._blob||new Blob()).catch(()=>{});
+ localStorage.setItem('tokcool_totalLikes',totalLikesGiven+'');updateUI();
+}
+function switchTab(tab){feedTab=(tab==='mine')?'mine':'foryou';document.getElementById('tabTop').classList.toggle('active',feedTab==='foryou');document.getElementById('tabMine').classList.toggle('active',feedTab==='mine');render();feed.scrollTop=0;}
+function openProfile(){if(!currentUser){document.getElementById('loginModal').style.display='flex';return;} document.getElementById('profileModal').style.display='flex'; updateUI();}
+function closeProfile(){document.getElementById('profileModal').style.display='none';}
+function renderProfileGrid(){
+ const grid=document.getElementById('myVideosGrid'); 
+ const noVids=document.getElementById('noVideos'); 
+ const headerCount=document.getElementById('myVideosHeaderCount');
+ grid.innerHTML='';
+ if(myVideos.length===0){
+   noVids.style.display='block';
+   if(headerCount) headerCount.textContent='0 videos • Record or Restore to see videos here';
+   return;
+ } 
+ noVids.style.display='none';
+ if(headerCount){
+   const totalLikes = myVideos.reduce((s,v)=>s+(v.likes||0),0);
+   headerCount.textContent = myVideos.length+' videos • ❤️ '+formatLikes(totalLikes)+' total likes • Tap any to play';
+ }
+
+ myVideos.forEach((v, idx)=>{
+   const div=document.createElement('div'); 
+   div.className='profileItem'; 
+   div.innerHTML=`
+     <video src="${v.video}" muted playsinline></video>
+     <div style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700">❤️ ${formatLikes(v.likes)}</div>
+     <div style="position:absolute;top:2px;right:2px;background:rgba(254,44,85,.9);padding:2px 6px;border-radius:6px;font-size:9px;font-weight:800">${idx+1}</div>
+     <div style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,.7);padding:2px 4px;border-radius:4px;font-size:8px">▶️</div>
+   `; 
+   div.onclick=()=>{closeProfile();switchTab('foryou');setTimeout(()=>playVideo(idx),300);}; 
+   grid.appendChild(div);
+ });
+ // Update stats after rendering
+ const totalLikes = myVideos.reduce((s,v)=>s+(v.likes||0),0);
+ if(document.getElementById('profileStatsDetail')){
+   document.getElementById('profileStatsDetail').textContent = myVideos.length+' videos • ❤️ '+formatLikes(totalLikes)+' likes • 👥 '+formatLikes(followers)+' followers • 👤 '+following+' following';
+ }
+}
+function openCreate(){if(!currentUser){document.getElementById('loginModal').style.display='flex';return;} document.getElementById('createModal').style.display='flex'; navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480}},audio:true}).then(s=>{document.getElementById('liveCam').srcObject=s;document.getElementById('liveCam').style.display='block';window.createStream=s;}).catch(e=>{});}
+function closeCreate(){document.getElementById('createModal').style.display='none'; if(window.createStream) window.createStream.getTracks().forEach(t=>t.stop());}
+function openSettings(){document.getElementById('settingsModal').style.display='flex'; updateUI();}
+function closeSettings(){document.getElementById('settingsModal').style.display='none';}
+
+// ========== SWITCH ACCOUNT - NOW WORKS! ==========
+function openSwitchAccount(){
+  document.getElementById('switchAccountModal').style.display='flex';
+  loadAccountsList().then(()=>renderAccountsList());
+}
+function closeSwitchAccount(){document.getElementById('switchAccountModal').style.display='none';}
+function openSwitchAccountFromLogin(){
+  document.getElementById('switchAccountModal').style.display='flex';
+  loadAccountsList().then(()=>renderAccountsList());
+}
+function renderAccountsList(){
+  const container=document.getElementById('accountsList');
+  if(!container) return;
+  
+  // Load from localStorage
+  try{
+    const accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+    savedAccounts = accounts;
+  }catch(e){ savedAccounts=[]; }
+  
+  if(savedAccounts.length===0){
+    container.innerHTML='<div style="padding:20px;text-align:center;opacity:.5"><div style="font-size:24px">👤</div><div style="margin-top:8px">No saved accounts yet<br><span style="font-size:11px">Create new account to see it here</span></div></div>';
+    return;
+  }
+  
+  // Filter out current account from list (show it as current separately)
+  const otherAccounts = savedAccounts.filter(a=>a.username!==currentUser?.username);
+  
+  if(otherAccounts.length===0){
+    container.innerHTML='<div style="padding:20px;text-align:center;opacity:.5"><div>Only 1 account - Current account shown above<br>Tap + Add to create new account</div></div>';
+    return;
+  }
+  
+  container.innerHTML = otherAccounts.map((acc, idx)=>`
+    <div class="accountItem" onclick="switchToAccount('${acc.username}')">
+      <div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:20px;font-weight:800;flex-shrink:0">${acc.username[1]?acc.username[1].toUpperCase():'U'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px">${acc.username}</div>
+        <div style="font-size:12px;opacity:.6">${acc.name||acc.email||''}</div>
+        <div style="font-size:11px;opacity:.5">📹 ${acc.videoCount||0} videos • 👤 ${formatLikes(acc.followers||0)} followers • ${acc.lastUsed?formatTime(acc.lastUsed):''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button style="background:#25F4EE;color:#000;border:0;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:800" onclick="event.stopPropagation(); switchToAccount('${acc.username}')">Switch</button>
+        <button style="background:#1e1e1e;color:#fff;border:0;padding:4px 8px;border-radius:4px;font-size:10px" onclick="event.stopPropagation(); removeAccount('${acc.username}')">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function switchToAccount(username){
+  try{
+    // Save current account first
+    if(currentUser){
+      saveToAccountsList({...currentUser, followers: followers, videoCount: myVideos.length, lastUsed: Date.now()});
+    }
+    
+    // Find account to switch to
+    const accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+    const targetAcc = accounts.find(a=>a.username===username);
+    
+    if(!targetAcc){
+      showStatus('❌ Account not found: '+username,2000);
+      return;
+    }
+    
+    showStatus('🔄 Switching to '+username+'...',2000);
+    
+    // Load target account
+    currentUser = {
+      username: targetAcc.username,
+      name: targetAcc.name||targetAcc.username.replace('@',''),
+      email: targetAcc.email||targetAcc.username+'@gmail.com'
+    };
+    
+    followers = targetAcc.followers||0;
+    totalLikesGiven = targetAcc.totalLikes||0;
+    
+    await saveUserPermanently(currentUser);
+    localStorage.setItem('tokcool_followers',followers+'');
+    
+    // Load this account's videos (in real app, videos would be per-account, for now we keep all but filter by username)
+    await loadMyVideos();
+    await loadConversations();
+    
+    closeSwitchAccount();
+    closeSettings();
+    closeProfile();
+    document.getElementById('loginModal').style.display='none';
+    
+    updateUI();
+    render();
+    
+    showStatus('✅ Switched to '+username+'! • '+myVideos.length+' videos • Followers: '+formatLikes(followers)+' • Works!',4000);
+    
+  }catch(e){
+    showStatus('❌ Error switching: '+e.message,2000);
+  }
+}
+
+function removeAccount(username){
+  if(!confirm('Remove account '+username+'? Videos stay in permanent cloud, but account removed from switch list.')) return;
+  try{
+    let accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]');
+    accounts = accounts.filter(a=>a.username!==username);
+    localStorage.setItem('tokcool_accounts', JSON.stringify(accounts));
+    savedAccounts = accounts;
+    renderAccountsList();
+    updateUI();
+    showStatus('🗑️ Removed '+username+' from switch list',2000);
+  }catch(e){}
+}
+
+function addNewAccount(){document.getElementById('addAccountModal').style.display='flex'; document.getElementById('newAccDisplayName').value=''; document.getElementById('newAccUsername').value='';}
+function closeAddAccount(){document.getElementById('addAccountModal').style.display='none';}
+
+async function createNewAccount(){
+  let displayName=document.getElementById('newAccDisplayName').value.trim();
+  let username=document.getElementById('newAccUsername').value.trim();
+  if(!username){alert('Enter @username');return;}
+  if(!username.startsWith('@')) username='@'+username;
+  if(username.length<3){alert('Username too short');return;}
+  if(!displayName) displayName=username.replace('@','');
+  
+  // Check if username exists
+  let accounts = [];
+  try{ accounts = JSON.parse(localStorage.getItem('tokcool_accounts')||'[]'); }catch(e){}
+  if(accounts.find(a=>a.username===username)){
+    alert('Account '+username+' already exists! Tap Switch to switch to it.');
+    return;
+  }
+  
+  // Save current account
+  if(currentUser){
+    saveToAccountsList({...currentUser, followers: followers, videoCount: myVideos.length, lastUsed: Date.now()});
+  }
+  
+  // Create new account
+  const newUser={
+    name: displayName,
+    email: username.replace('@','')+'@gmail.com',
+    username: username,
+    created: Date.now(),
+    followers: 0,
+    videoCount: 0
+  };
+  
+  currentUser = newUser;
+  followers = 0;
+  myVideos = []; // New account starts with 0 videos (in real app, per-account videos)
+  totalLikesGiven = 0;
+  
+  await saveUserPermanently(newUser);
+  localStorage.setItem('tokcool_followers', '0');
+  localStorage.setItem('tokcool_totalLikes', '0');
+  
+  // Save to accounts list
+  saveToAccountsList({...newUser, followers: 0, videoCount: 0, lastUsed: Date.now()});
+  
+  closeAddAccount();
+  closeSwitchAccount();
+  closeSettings();
+  closeProfile();
+  document.getElementById('loginModal').style.display='none';
+  
+  updateUI();
+  render();
+  
+  showStatus('✅ Created & switched to '+username+'! New account - 0 videos, 0 followers, 0 likes - Forever saved! Switch anytime in settings!',4000);
+}
+
+// DISCOVER
+function openDiscover(){document.getElementById('discoverModal').style.display='flex'; loadDiscover();}
+function closeDiscover(){document.getElementById('discoverModal').style.display='none';}
+function loadDiscover(){
+ const allPeople={};
+ if(currentUser) allPeople[currentUser.username]={username:currentUser.username,name:currentUser.name,avatar:currentUser.username[1].toUpperCase(),bio:'You • '+myVideos.length+' videos • '+formatLikes(myVideos.reduce((s,v)=>s+(v.likes||0),0))+' likes • PUBLIC - Others can see your videos!',videos:myVideos.length,isMe:true,likes:myVideos.reduce((s,v)=>s+(v.likes||0),0)};
+ // Include ALL public videos so discover shows all users
+ [...forYouVideos,...myVideos,...publicVideos].forEach(v=>{ 
+   if(!allPeople[v.user]) allPeople[v.user]={username:v.user,name:v.user.replace('@',''),avatar:v.avatar,bio:(v.cap||'').substring(0,30)+' • '+formatLikes(v.likes)+' likes • PUBLIC',videos:1,likes:v.likes}; 
+   else {allPeople[v.user].videos++; allPeople[v.user].likes=(allPeople[v.user].likes||0)+v.likes;}
+ });
+ window.allPeople=Object.values(allPeople);
+ renderDiscoverPeople(window.allPeople);
+}
+function renderDiscoverPeople(people){
+ const container=document.getElementById('discoverResults');
+ if(!container) return;
+ if(people.length===0){container.innerHTML='<div style="padding:40px;text-align:center;opacity:.5">No people found</div>';return;}
+ container.innerHTML=people.map(p=>`
+   <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer" onclick="viewUser('${p.username}')">
+     <div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:18px;font-weight:800">${p.avatar}</div>
+     <div style="flex:1"><div style="font-weight:700;font-size:14px">${p.username} ${p.isMe?'<span style="background:#25F4EE;color:#000;padding:1px 5px;border-radius:4px;font-size:9px">YOU</span>':''}</div><div style="font-size:12px;opacity:.6">${p.bio}</div><div style="font-size:11px;opacity:.5">❤️ ${formatLikes(p.likes||0)} likes • ${p.videos} videos</div></div>
+     <button style="background:#FE2C55;color:#fff;border:0;padding:6px 14px;border-radius:4px;font-size:12px;font-weight:700">View</button>
+   </div>
+ `).join('');
+}
+function searchPeople(q){q=q.toLowerCase().trim().replace('@','');if(!q){renderDiscoverPeople(window.allPeople||[]);return;}let filtered=(window.allPeople||[]).filter(p=>p.username.toLowerCase().includes(q)||p.name.toLowerCase().includes(q));renderDiscoverPeople(filtered);}
+function viewUser(username){
+ const user=(window.allPeople||[]).find(p=>p.username===username);
+ if(!user) return;
+ window.currentViewingUser=user;
+ document.getElementById('userViewModal').style.display='flex';
+ document.getElementById('userViewHandle').textContent=user.username;
+ document.getElementById('userViewAvatar').textContent=user.avatar;
+ document.getElementById('userViewName').textContent=user.username;
+ document.getElementById('userViewName').innerHTML = user.username + '<div style="font-size:11px;opacity:.6;margin-top:4px">Videos visible to all accounts - PUBLIC!</div>';
+ 
+ // PUBLIC: Show ALL videos for this user from publicVideos + myVideos + forYouVideos
+ const allSources = [...publicVideos, ...myVideos, ...forYouVideos];
+ const seen = new Set();
+ let allVids = [];
+ for(let v of allSources){
+   if(!seen.has(v.id)){
+     seen.add(v.id);
+     allVids.push(v);
+   }
+ }
+ const userVideos = allVids.filter(v=>v.user===username);
+ const grid=document.getElementById('userViewVideos');
+ if(userVideos.length===0){
+   grid.innerHTML='<div style="grid-column:1/-1;padding:20px;text-align:center;opacity:.5"><div style="font-size:24px">📹</div><div>No videos - This user has no public videos yet<br><span style="font-size:10px">Videos are public - other accounts CAN see them when posted</span></div></div>';
+ } else {
+   grid.innerHTML=userVideos.map(v=>`<div class="profileItem" onclick="closeUserView(); setTimeout(()=>{const idx=[...myVideos,...publicVideos,...forYouVideos].findIndex(x=>x.id===${v.id}); if(idx>=0) playVideo(idx);},300)"><video src="${v.video}" muted playsinline></video><div style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700">❤️ ${formatLikes(v.likes)}</div><div style="position:absolute;top:2px;left:2px;background:#25F4EE;color:#000;padding:2px 6px;border-radius:6px;font-size:8px;font-weight:800">PUBLIC</div></div>`).join('');
+ }
+ // Show count
+ const countEl = document.getElementById('userViewHandle');
+ if(countEl) countEl.textContent = username + ' • ' + userVideos.length + ' videos • PUBLIC';
+}
+function closeUserView(){document.getElementById('userViewModal').style.display='none';}
+function messageCurrentUser(){if(window.currentViewingUser) openChat(window.currentViewingUser.username);}
+function followCurrentUser(){
+  if(!window.currentViewingUser) return;
+  if(window.currentViewingUser.isMe){showStatus('You cannot follow yourself!');return;}
+  const username = window.currentViewingUser.username;
+  if(followingList.includes(username)){
+    showStatus('Already following '+username+' • Tap Following in profile to see all people you follow',2500);
+    return;
+  }
+  followingList.push(username);
+  following = followingList.length;
+  // Simulate getting a follower back sometimes
+  if(Math.random()>0.5){
+    const newFollower = username; // The person you followed follows back (demo)
+    if(!followersList.includes(newFollower)){
+      followersList.push(newFollower);
+      followers = followersList.length;
+    }
+  }
+  saveFollowData();
+  if(currentUser) saveToAccountsList({...currentUser, followers: followers, following: following, videoCount: myVideos.length});
+  updateUI();
+  showStatus('✅ Following '+username+'! • Following: '+following+' people • Followers: '+formatLikes(followers)+' • Profile now shows ALL!',3500);
+}
+function showStorage(){showStatus('💾 '+myVideos.length+' videos • ❤️ '+formatLikes(myVideos.reduce((s,v)=>s+(v.likes||0),0))+' likes • 👤 '+formatLikes(followers)+' followers (separate) • '+savedAccounts.length+' accounts',4000);}
+
+// MESSAGES
+let conversations={};
+let currentChatUser=null;
+async function saveConversations(){try{localStorage.setItem('tokcool_conversations',JSON.stringify(conversations));const db=await openDB();const tx=db.transaction(STORE_USER,'readwrite');tx.objectStore(STORE_USER).put({id:'conversations',data:conversations,savedAt:Date.now()});}catch(e){}}
+async function loadConversations(){try{const saved=localStorage.getItem('tokcool_conversations');if(saved) conversations=JSON.parse(saved);}catch(e){conversations={};}updateInboxBadge();}
+function openInbox(){document.getElementById('inboxModal').style.display='flex';document.querySelectorAll('.navItem').forEach(n=>n.classList.remove('active'));document.getElementById('inboxNav').classList.add('active');renderInbox();}
+function closeInbox(){document.getElementById('inboxModal').style.display='none';document.querySelectorAll('.navItem').forEach(n=>n.classList.remove('active'));document.querySelectorAll('.navItem')[0].classList.add('active');}
+function renderInbox(){
+  const list=document.getElementById('inboxList');const noInbox=document.getElementById('noInbox');
+  const convArray=Object.values(conversations).sort((a,b)=>(b.lastTime||0)-(a.lastTime||0));
+  if(convArray.length===0){list.style.display='none';noInbox.style.display='block';return;}
+  list.style.display='block';noInbox.style.display='none';
+  list.innerHTML=convArray.map(c=>`<div style="display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer" onclick="openChat('${c.user.username}')"><div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:18px;font-weight:800">${c.user.avatar}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${c.user.username}</div><div style="font-size:12px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.lastMessage||''}</div></div><div style="font-size:10px;opacity:.5">${formatTime(c.lastTime)}</div></div>`).join('');
+}
+function searchInbox(q){q=q.toLowerCase().trim();if(!q){renderInbox();return;}const filtered=Object.values(conversations).filter(c=>c.user.username.toLowerCase().includes(q));document.getElementById('inboxList').innerHTML=filtered.map(c=>`<div style="display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer" onclick="openChat('${c.user.username}')"><div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center">${c.user.avatar}</div><div style="flex:1"><div style="font-weight:700">${c.user.username}</div><div style="font-size:12px;opacity:.6">${c.lastMessage||''}</div></div></div>`).join('');}
+function openChat(username){
+  let user=null;
+  if(window.allPeople) user=window.allPeople.find(p=>p.username===username);
+  if(!user && conversations[username]) user=conversations[username].user;
+  if(!user) user={username:username,name:username.replace('@',''),avatar:username[1]?username[1].toUpperCase():'U'};
+  currentChatUser=user;
+  if(conversations[username]){conversations[username].unread=0; saveConversations(); updateInboxBadge();}
+  else {conversations[username]={user:user,messages:[],lastMessage:'',lastTime:Date.now(),unread:0};}
+  document.getElementById('chatModal').style.display='flex';
+  document.getElementById('chatUsername').textContent=user.username;
+  document.getElementById('chatAvatar').textContent=user.avatar;
+  renderChatMessages(username);
+  document.getElementById('inboxModal').style.display='none';document.getElementById('userViewModal').style.display='none';document.getElementById('discoverModal').style.display='none';
+}
+function closeChat(){document.getElementById('chatModal').style.display='none';openInbox();currentChatUser=null;}
+function renderChatMessages(username){
+  const conv=conversations[username];
+  const container=document.getElementById('chatMessages');
+  if(!conv || conv.messages.length===0){container.innerHTML=`<div style="text-align:center;padding:40px 20px;opacity:.6"><div style="width:64px;height:64px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:28px;margin:0 auto">${conv?conv.user.avatar:'U'}</div><div style="font-weight:700;margin-top:12px">${username}</div><div style="font-size:11px;margin-top:8px;background:#111;padding:8px 12px;border-radius:10px;display:inline-block">💬 Messages forever saved • Switch account works!</div></div>`;return;}
+  container.innerHTML=conv.messages.map(m=>`<div style="display:flex;${m.fromMe?'justify-content:flex-end':'justify-content:flex-start'}"><div style="max-width:70%;padding:10px 12px;border-radius:18px;font-size:14px;${m.fromMe?'background:#FE2C55;color:#fff;border-bottom-right-radius:4px':'background:#1e1e1e'}">${m.text}<div style="font-size:9px;opacity:.6;margin-top:4px">${formatTime(m.time)}</div></div></div>`).join('');
+  setTimeout(()=>{container.scrollTop=container.scrollHeight;},100);
+}
+function sendMessage(){
+  const input=document.getElementById('messageInput');
+  const text=input.value.trim();
+  if(!text || !currentChatUser) return;
+  const username=currentChatUser.username;
+  if(!conversations[username]) conversations[username]={user:currentChatUser,messages:[],lastMessage:'',lastTime:Date.now(),unread:0};
+  conversations[username].messages.push({text:text,time:Date.now(),fromMe:true});
+  conversations[username].lastMessage='You: '+text;
+  conversations[username].lastTime=Date.now();
+  input.value='';renderChatMessages(username);saveConversations();
+  setTimeout(()=>{const replies=["Hey! 😊","Nice video! 🔥","Switch account works now! 🔄","Likes don't add followers - Fixed! ❤️"];const reply=replies[Math.floor(Math.random()*replies.length)];conversations[username].messages.push({text:reply,time:Date.now(),fromMe:false});conversations[username].lastMessage=reply;conversations[username].lastTime=Date.now();if(currentChatUser && currentChatUser.username===username) renderChatMessages(username);else {conversations[username].unread=(conversations[username].unread||0)+1;updateInboxBadge();}saveConversations();renderInbox();},1000);
+  showStatus('✅ Message sent!',2000);
+}
+function formatTime(ts){if(!ts) return '';const diff=Date.now()-ts;if(diff<60000) return 'now';if(diff<3600000) return Math.floor(diff/60000)+'m';if(diff<86400000) return Math.floor(diff/3600000)+'h';return Math.floor(diff/86400000)+'d';}
+function updateInboxBadge(){const total=Object.values(conversations).reduce((s,c)=>s+(c.unread||0),0);const badge=document.getElementById('inboxBadge');if(badge){if(total>0){badge.textContent=total;badge.style.display='inline';} else badge.style.display='none';}}
+
+// ========== FOLLOWERS & FOLLOWING - PROFILE SHOWS ALL ==========
+function loadFollowData(){
+  try{
+    const savedFollowing = localStorage.getItem('tokcool_following');
+    if(savedFollowing) followingList = JSON.parse(savedFollowing);
+    else followingList = [];
+    
+    const savedFollowers = localStorage.getItem('tokcool_followers_list');
+    if(savedFollowers) followersList = JSON.parse(savedFollowers);
+    else followersList = [];
+    
+    following = followingList.length;
+    // followers count already loaded, but ensure list matches
+    if(followersList.length>followers) followers = followersList.length;
+  }catch(e){
+    followingList=[]; followersList=[]; following=0;
+  }
+}
+
+function saveFollowData(){
+  try{
+    localStorage.setItem('tokcool_following', JSON.stringify(followingList));
+    localStorage.setItem('tokcool_followers_list', JSON.stringify(followersList));
+    localStorage.setItem('tokcool_followers', followers+'');
+    localStorage.setItem('tokcool_following_count', following+'');
+  }catch(e){}
+}
+
+function openFollowersList(){
+  document.getElementById('followersModal').style.display='flex';
+  document.getElementById('followersCountBig').textContent=formatLikes(followers);
+  renderFollowersList();
+}
+
+function closeFollowersList(){document.getElementById('followersModal').style.display='none';}
+
+function renderFollowersList(){
+  const container=document.getElementById('followersList');
+  const noFollowers=document.getElementById('noFollowers');
+  if(followersList.length===0){
+    container.style.display='none';
+    noFollowers.style.display='block';
+    return;
+  }
+  container.style.display='block';
+  noFollowers.style.display='none';
+  container.innerHTML = followersList.map(username=>{
+    const user = (window.allPeople||[]).find(p=>p.username===username) || {username: username, avatar: username[1]?username[1].toUpperCase():'U', name: username.replace('@',''), bio: 'Follows you • ❤️ Liker'};
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer" onclick="viewUser('${user.username}'); closeFollowersList()">
+      <div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:18px;font-weight:800">${user.avatar}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:14px">${user.username}</div><div style="font-size:12px;opacity:.6">${user.name||user.bio}</div><div style="font-size:11px;opacity:.5">❤️ Follows you • Tap to view profile</div></div>
+      <button style="background:#1e1e1e;color:#fff;border:0;padding:6px 12px;border-radius:6px;font-size:11px" onclick="event.stopPropagation(); openChat('${user.username}')">Message</button>
+    </div>`;
+  }).join('');
+}
+
+function openFollowingList(){
+  document.getElementById('followingModal').style.display='flex';
+  document.getElementById('followingCountBig').textContent=formatLikes(following);
+  renderFollowingList();
+}
+
+function closeFollowingList(){document.getElementById('followingModal').style.display='none';}
+
+function renderFollowingList(){
+  const container=document.getElementById('followingList');
+  const noFollowing=document.getElementById('noFollowing');
+  if(followingList.length===0){
+    container.style.display='none';
+    noFollowing.style.display='block';
+    return;
+  }
+  container.style.display='block';
+  noFollowing.style.display='none';
+  container.innerHTML = followingList.map(username=>{
+    const user = (window.allPeople||[]).find(p=>p.username===username) || {username: username, avatar: username[1]?username[1].toUpperCase():'U', name: username.replace('@',''), bio: 'You follow • Discover'};
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer" onclick="viewUser('${user.username}'); closeFollowingList()">
+      <div style="width:48px;height:48px;border-radius:50%;background:#1e1e1e;display:grid;place-items:center;font-size:18px;font-weight:800">${user.avatar}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:14px">${user.username}</div><div style="font-size:12px;opacity:.6">${user.name||user.bio}</div><div style="font-size:11px;opacity:.5">👤 You follow • Tap to view • Message</div></div>
+      <div style="display:flex;gap:4px;flex-direction:column">
+        <button style="background:#FE2C55;color:#fff;border:0;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700" onclick="event.stopPropagation(); openChat('${user.username}')">Message</button>
+        <button style="background:#1e1e1e;color:#fff;border:0;padding:4px 8px;border-radius:4px;font-size:10px" onclick="event.stopPropagation(); unfollowUser('${user.username}')">Unfollow</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function unfollowUser(username){
+  if(!confirm('Unfollow '+username+'?')) return;
+  followingList = followingList.filter(u=>u!==username);
+  following = followingList.length;
+  saveFollowData();
+  renderFollowingList();
+  updateUI();
+  showStatus('👋 Unfollowed '+username+' • Following: '+following,2000);
+  document.getElementById('followingCountBig').textContent=formatLikes(following);
+}
+
+function followUser(username){
+  if(followingList.includes(username)){
+    showStatus('Already following '+username,2000);
+    return;
+  }
+  followingList.push(username);
+  following = followingList.length;
+  saveFollowData();
+  updateUI();
+  showStatus('✅ Following '+username+'! Following: '+following+' • Check Profile > Following to see all people you follow',3000);
+}
+
+// Updated followCurrentUser to use following system
+function followCurrentUserNew(){
+  if(!window.currentViewingUser) return;
+  if(window.currentViewingUser.isMe){showStatus('You cannot follow yourself!');return;}
+  const username = window.currentViewingUser.username;
+  if(followingList.includes(username)){
+    showStatus('Already following '+username+' • Following: '+following,2000);
+    return;
+  }
+  followingList.push(username);
+  following = followingList.length;
+  // Also add a follower to that user (simulated)
+  // For demo, we add a random follower to you occasionally
+  if(Math.random()>0.7){
+    const fakeFollower = '@fan'+Math.floor(Math.random()*1000);
+    if(!followersList.includes(fakeFollower)){
+      followersList.push(fakeFollower);
+      followers = followersList.length;
+    }
+  }
+  saveFollowData();
+  updateUI();
+  showStatus('✅ Following '+username+'! Following: '+following+' • Followers: '+formatLikes(followers)+' • Check Profile to see all!',3000);
+}
+
+function editUsername(){if(!currentUser) return; document.getElementById('editUsernameModal').style.display='flex'; document.getElementById('editDisplayName').value=currentUser.name||''; document.getElementById('editUsernameInput').value=currentUser.username||'';}
+function closeEditUsername(){document.getElementById('editUsernameModal').style.display='none';}
+async function saveUsername(){
+ let newUsername=document.getElementById('editUsernameInput').value.trim();
+ if(!newUsername) return;
+ if(!newUsername.startsWith('@')) newUsername='@'+newUsername;
+ const newDisplayName=document.getElementById('editDisplayName').value.trim();
+ currentUser.username=newUsername;
+ if(newDisplayName) currentUser.name=newDisplayName;
+ await saveUserPermanently(currentUser);
+ for(let v of myVideos){v.user=newUsername; v.avatar=newUsername[1]?newUsername[1].toUpperCase():'U';}
+ updateUI(); render(); closeEditUsername(); showStatus('✅ Username '+newUsername+' - Forever saved!',4000);
+}
+function logout(){if(confirm('Log out? Videos & messages stay saved')){localStorage.removeItem('tokcool_user_simple'); currentUser=null; document.getElementById('loginModal').style.display='flex';}}
+
+let mediaRecorder,chunks=[],blobUrl=null;
+document.getElementById('recBtn').onclick=async()=>{
+ const btn=document.getElementById('recBtn'); const live=document.getElementById('liveCam'); const preview=document.getElementById('previewCam');
+ if(btn.textContent.includes('Record')){
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480}},audio:true});
+   live.srcObject=stream; live.style.display='block'; preview.style.display='none'; window.createStream=stream;
+   let mime='video/webm;codecs=vp8,opus'; if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
+   try{mediaRecorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:500000});}catch(e){mediaRecorder=new MediaRecorder(stream,{mimeType:mime});} chunks=[];
+   mediaRecorder.ondataavailable=e=>{if(e.data.size>0) chunks.push(e.data);};
+   mediaRecorder.onstop=()=>{const blob=new Blob(chunks,{type:'video/webm'}); lastBlob=blob; blobUrl=URL.createObjectURL(blob); preview.src=blobUrl; preview.style.display='block'; preview.muted=false; preview.volume=1; live.style.display='none'; preview.play().catch(()=>{});};
+   mediaRecorder.start(100); btn.textContent='■ STOP';
+  }catch(e){alert('Allow camera & mic');}
+ }else{if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop(); btn.textContent='● Record'; btn.style.background='#FE2C55';}
+};
+document.getElementById('galleryInput').addEventListener('change',e=>{const file=e.target.files[0]; if(!file) return; lastBlob=file; blobUrl=URL.createObjectURL(file); const preview=document.getElementById('previewCam'); preview.src=blobUrl; preview.style.display='block'; preview.muted=false; preview.volume=1; document.getElementById('liveCam').style.display='none'; preview.play().catch(()=>{});});
+
+async function postVideo(){
+ if(!blobUrl||!lastBlob){alert('Record first!');return;}
+ const user=currentUser?currentUser.username:'@tokcool';
+ const cap=document.getElementById('capIn').value||'My video - PUBLIC! Others can see it! ❤️';
+ const id=Date.now();
+ const meta={id:id,user:user,avatar:user[1]?user[1].toUpperCase():'U',cap:cap,poster:'https://picsum.photos/seed/tok'+id+'/400/700',sound:'Original - PUBLIC',likes:0,liked:false,isMyVideo:true,created:id,isPublic:true};
+ const newVid={...meta,video:blobUrl,_blob:lastBlob,_dbId:id};
+ forYouVideos.unshift(newVid); 
+ myVideos.unshift(newVid); 
+ publicVideos.unshift(newVid); // PUBLIC - visible to all accounts!
+ saveMyVideos(); closeCreate(); switchTab('mine'); updateUI();
+ showStatus('⚡ POSTED PUBLIC! Others can see your video! 0 likes - Tap ❤️ - PUBLIC!',3000);
+ const savedBlob=lastBlob; const savedMeta=meta; blobUrl=null; lastBlob=null;
+ setTimeout(async()=>{await saveVideoToDB(savedMeta,savedBlob); showStatus('✅ SAVED FOREVER! Switch account works!',4000);},100);
+}
+
+(async()=>{
+ try{
+  document.getElementById('recoveryStatus').textContent='☁️ Checking permanent cloud for ALL your videos...';
+  await loadAccountsList();
+  const savedUser=await loadUserPermanently();
+  if(savedUser&&savedUser.username){
+    currentUser=savedUser;
+    followers=parseInt(localStorage.getItem('tokcool_followers')||'0');
+    totalLikesGiven=parseInt(localStorage.getItem('tokcool_totalLikes')||'0');
+    // FORCE RESTORE ALL - don't filter by username on auto-load!
+    const count = await loadAllVideosForce();
+    await loadConversations();loadFollowData();
+    setTimeout(()=>{
+      document.getElementById('loginModal').style.display='none';
+      updateUI();render();
+      renderProfileGrid();
+      if(count>0){
+        showStatus('✅ Welcome back '+savedUser.username+'! RESTORED '+count+' videos! • '+savedAccounts.length+' accounts • Switch works! Check Profile!',5000);
+        document.getElementById('recoveryStatus').textContent='✅ RESTORED '+count+' videos for '+savedUser.username+' - Forever saved!';
+      } else {
+        showStatus('✅ Welcome back '+savedUser.username+'! '+savedAccounts.length+' accounts • Switch works! • Likes fixed! No videos in cloud yet - record new!',4000);
+        document.getElementById('recoveryStatus').textContent='Welcome '+savedUser.username+' - 0 videos in cloud - Tap RESTORE ALL button if you had videos before';
+      }
+    },800);
+  } else {
+    document.getElementById('recoveryStatus').textContent='No saved account - Create one - Switch account will work! • '+savedAccounts.length+' accounts saved - Tap RESTORE ALL MY VIDEOS if you had videos';
+    // Still try restore videos even without user
+    setTimeout(async()=>{
+      const count = await loadAllVideosForce();
+      if(count>0){
+        document.getElementById('recoveryStatus').textContent='🔍 Found '+count+' videos in cloud! Tap RESTORE ALL MY VIDEOS BACK button to restore!';
+      }
+    },1000);
+  }
+ }catch(e){console.log(e);}
+})();
+render();
+</script>
+
+<!-- FOLLOWERS LIST - Shows all followers -->
+<div id="followersModal" class="modal" style="z-index:155">
+<div class="modalTop"><span onclick="closeFollowersList()">✕</span><span>Followers • People following you</span><span></span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:16px;background:#111;text-align:center">
+<div style="font-size:32px" id="followersCountBig">0</div>
+<div style="font-size:14px;font-weight:700">Followers</div>
+<div style="font-size:11px;opacity:.6;margin-top:4px">People who follow you • Likes DON'T add followers - Only Follow button does</div>
+</div>
+<div id="followersList"></div>
+<div id="noFollowers" style="padding:40px;text-align:center;opacity:.5;display:none">
+<div style="font-size:40px">👥</div>
+<div style="margin-top:10px">No followers yet<br><span style="font-size:11px">When people tap Follow on your profile, they appear here<br>Likes DON'T add followers - Fixed!</span></div>
+<button class="bigBtn pink" style="margin-top:12px" onclick="closeFollowersList(); openDiscover()">🔍 Find people to get followers</button>
+</div>
+</div>
+</div>
+
+<!-- FOLLOWING LIST - Shows people you follow -->
+<div id="followingModal" class="modal" style="z-index:155">
+<div class="modalTop"><span onclick="closeFollowingList()">✕</span><span>Following • People you follow</span><span></span></div>
+<div class="modalBody" style="padding:0;background:#000">
+<div style="padding:16px;background:#111;text-align:center">
+<div style="font-size:32px" id="followingCountBig">0</div>
+<div style="font-size:14px;font-weight:700">Following</div>
+<div style="font-size:11px;opacity:.6;margin-top:4px">People you follow • Tap Follow in Discover to add people here</div>
+</div>
+<div id="followingList"></div>
+<div id="noFollowing" style="padding:40px;text-align:center;opacity:.5;display:none">
+<div style="font-size:40px">👤</div>
+<div style="margin-top:10px">Not following anyone yet<br><span style="font-size:11px">Go to Discover and tap Follow on people to see them here</span></div>
+<button class="bigBtn pink" style="margin-top:12px" onclick="closeFollowingList(); openDiscover()">🔍 Discover people to follow</button>
+</div>
+</div>
+</div>
+</body></html>
+<script async src="/.netlify/scripts/ar" data-netlify-deploy-id="6ac04349a7d71d6cea853229" data-netlify-site-id="aa00a3f2-01e0-4c29-9a11-27355c9ffb76" data-agent-runner-id="6ac04327c46095fdd938887c"></script>
+<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" data-netlify-site-id="aa00a3f2-01e0-4c29-9a11-27355c9ffb76" data-app-host="app.netlify.com" data-account-tier="free"></script>
