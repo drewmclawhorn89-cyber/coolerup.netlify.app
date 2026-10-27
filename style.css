@@ -1,0 +1,13 @@
+body{margin:0;font-family:system-ui,sans-serif;background:#111;color:#eee}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#000;position:sticky;top:0}
+h1{margin:0;font-size:1.2rem}
+nav button{background:none;border:0;color:#999;font-size:1rem;padding:6px 12px;cursor:pointer}
+nav button.active{color:#fff;border-bottom:2px solid #ff3b6b}
+main{max-width:480px;margin:0 auto;padding:16px}
+#post-form{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+input{padding:8px;border-radius:6px;border:1px solid #333;background:#222;color:#eee}
+#post-form button,.like{padding:8px;border:0;border-radius:6px;background:#ff3b6b;color:#fff;cursor:pointer}
+.card{background:#1b1b1b;border-radius:8px;padding:10px;margin-bottom:16px}
+video{width:100%;border-radius:6px;background:#000}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:.9rem}
+.empty{color:#888;text-align:center}
